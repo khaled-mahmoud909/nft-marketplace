@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
@@ -15,6 +11,8 @@ import {
   TransactionType,
 } from 'src/schemas/transaction.schema';
 import { User, UserDocument } from 'src/schemas/user.schema';
+import { NFTMetadata } from 'src/interfaces/metadata.interface';
+import { BlockchainEventLog } from 'src/interfaces/blockchainEvents.interface';
 
 @Injectable()
 export class BlockchainService implements OnModuleInit {
@@ -63,8 +61,8 @@ export class BlockchainService implements OnModuleInit {
         this.provider,
       );
 
-      const name = await this.contract.name();
-      const symbol = await this.contract.symbol();
+      const name = (await this.contract.name()) as string;
+      const symbol = (await this.contract.symbol()) as string;
       this.logger.log(
         `Connected to contract: ${name} (${symbol}) at address ${contractAddress}`,
       );
@@ -79,7 +77,13 @@ export class BlockchainService implements OnModuleInit {
 
     void this.contract.on(
       'NFTMinted',
-      (tokenId, minter, tokenURI, timestamp, event) => {
+      (
+        tokenId,
+        minter: string,
+        tokenURI: string,
+        timestamp,
+        event: BlockchainEventLog,
+      ) => {
         void (async () => {
           this.logger.log(
             `NFTMinted event detected: tokenId=${tokenId}, minter=${minter}`,
@@ -95,7 +99,9 @@ export class BlockchainService implements OnModuleInit {
               event.log.blockNumber,
             );
           } catch (error) {
-            this.logger.error('Error handling NFTMinted event', error);
+            // eslint-disable-next-line prettier/prettier
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.error('Error handling NFTMinted event', errorMessage);
           }
         })();
       },
@@ -118,20 +124,26 @@ export class BlockchainService implements OnModuleInit {
       return;
     }
 
-    let metadata = { name: 'NFT #${tokenId}', description: '', image: '' };
+    let metadata: NFTMetadata = {
+      name: `NFT #${tokenId}`,
+      description: '',
+      image: '',
+    };
     if (tokenURI.startsWith('http')) {
       try {
         const response = await fetch(tokenURI);
         if (response.ok) {
-          metadata = await response.json();
+          metadata = (await response.json()) as NFTMetadata;
         } else {
           this.logger.warn(
             `Failed to fetch metadata from ${tokenURI}: ${response.statusText}`,
           );
         }
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.warn(
-          `Error fetching metadata from ${tokenURI}: ${error.message}`,
+          `Error fetching metadata from ${tokenURI}: ${errorMessage}`,
         );
       }
     }
@@ -205,8 +217,8 @@ export class BlockchainService implements OnModuleInit {
 
           await this.handleNFTMinted(
             Number(tokenId),
-            minter,
-            tokenURI,
+            String(minter),
+            String(tokenURI),
             Number(timestamp),
             event.transactionHash,
             event.blockNumber,
@@ -229,17 +241,17 @@ export class BlockchainService implements OnModuleInit {
   }
 
   async getTotalSupply(): Promise<number> {
-    const totalSupply = await this.contract.getTotalSupply();
+    const totalSupply = (await this.contract.getTotalSupply()) as number;
     return totalSupply;
   }
 
   async getTokenURI(tokenId: number): Promise<string> {
-    const tokenURI = await this.contract.tokenURI(tokenId);
+    const tokenURI = (await this.contract.tokenURI(tokenId)) as string;
     return tokenURI;
   }
 
   async getOwnerOf(tokenId: number): Promise<string> {
-    const owner = await this.contract.ownerOf(tokenId);
+    const owner = (await this.contract.ownerOf(tokenId)) as string;
     return owner;
   }
 }

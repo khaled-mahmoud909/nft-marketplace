@@ -30,6 +30,10 @@ export class GetNFTsDto {
 
   @IsOptional()
   @IsString()
+  sortBy?: string = 'createdAt';
+
+  @IsOptional()
+  @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc';
 }
 
