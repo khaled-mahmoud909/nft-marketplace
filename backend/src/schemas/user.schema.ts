@@ -19,7 +19,11 @@ export class User {
   nftsMinted: number;
 }
 
-export type UserDocument = User & Document;
+export interface UserDocument extends User, Document {
+  createdAt: Date;
+  updatedAt: Date;
+}
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.index({ walletAddress: 1 });
+UserSchema.index({ username: 1 });
