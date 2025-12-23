@@ -1,24 +1,25 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import { Route, Router, Routes } from "react-router-dom";
+import { Web3Provider } from "./contexts/Web3Context";
+import Navbar from "./components/Navbar/Navbar";
+import Home from "./pages/Home/Home";
+import Profile from "./pages/Profile/Profile";
+import Mint from "./pages/Mint/Mint";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Web3Provider>
+      <Router>
+        <div className="min-h-screen bg-gray-100">
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/mint" element={<Mint />} />
+          </Routes>
+        </div>
+      </Router>
+    </Web3Provider>
   );
 }
 
