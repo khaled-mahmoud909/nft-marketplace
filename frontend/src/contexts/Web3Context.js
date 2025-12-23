@@ -3,6 +3,7 @@ import { authAPI } from "../services/api";
 
 
 const Web3Context = createContext();
+const NETWORK_CHAIN_ID = parseInt(process.env.REACT_APP_CHAIN_ID, 10);
 
 export const useWeb3 = () => {
     const context = useContext(Web3Context);
@@ -30,7 +31,7 @@ export const Web3Provider = ({ children }) => {
         if(!window.ethereum) return false;
 
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        const expectedChainId = `0x${parseInt(process.env.REACT_APP_CHAIN_ID).toString(16)}`;
+        const expectedChainId = `0x${NETWORK_CHAIN_ID.toString(16)}`;
 
         return chainId === expectedChainId;
     };
@@ -39,7 +40,7 @@ export const Web3Provider = ({ children }) => {
         try {
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: `0x${parseInt(process.env.REACT_APP_CHAIN_ID).toString(16)}` }],
+                params: [{ chainId: `0x${NETWORK_CHAIN_ID.toString(16)}` }],
             });
             return true;
         } catch (error) {
@@ -48,7 +49,7 @@ export const Web3Provider = ({ children }) => {
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
-                            chainId: `0x${parseInt(process.env.REACT_APP_CHAIN_ID).toString(16)}`,
+                            chainId: `0x${NETWORK_CHAIN_ID.toString(16)}`,
                             chainName: 'Sepolia Testnet',
                             nativeCurrency: {
                                 name: 'SepoliaETH',
