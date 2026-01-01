@@ -129,8 +129,37 @@ export class BlockchainService implements OnModuleInit {
       description: '',
       image: '',
     };
-    if (tokenURI.startsWith('http')) {
-      try {
+
+    try {
+      if (tokenURI.startsWith('data:application/json;base64,')) {
+        this.logger.log(`Decoding base64 metadata for tokenId=${tokenId}`);
+        const base64Data = tokenURI.replace(
+          'data:application/json;base64,',
+          '',
+        );
+        const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+        metadata = JSON.parse(jsonString) as NFTMetadata;
+        this.logger.log(
+          `Successfully decoded base64 metadata: ${JSON.stringify(metadata)}`,
+        );
+      } else if (tokenURI.startsWith('ipfs://')) {
+        const ipfsHash = tokenURI.replace('ipfs://', '');
+        const ipfsUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
+        this.logger.log(`Fetching IPFS metadata from ${ipfsUrl}`);
+        const response = await fetch(ipfsUrl);
+        if (response.ok) {
+          metadata = (await response.json()) as NFTMetadata;
+          this.logger.log(
+            `Successfully fetched IPFS metadata: ${JSON.stringify(metadata)}`,
+          );
+        } else {
+          this.logger.warn(
+            `Failed to fetch IPFS metadata from ${ipfsUrl}: ${response.statusText}`,
+          );
+        }
+      } else if (tokenURI.startsWith('http')) {
+        this.logger.log(`Fetching metadata from ${tokenURI}`);
+
         const response = await fetch(tokenURI);
         if (response.ok) {
           metadata = (await response.json()) as NFTMetadata;
@@ -139,13 +168,15 @@ export class BlockchainService implements OnModuleInit {
             `Failed to fetch metadata from ${tokenURI}: ${response.statusText}`,
           );
         }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        this.logger.warn(
-          `Error fetching metadata from ${tokenURI}: ${errorMessage}`,
-        );
+      } else {
+        this.logger.warn(`Unsupported tokenURI format: ${tokenURI}`);
       }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Error fetching/parsing metadata for tokenId=${tokenId}: ${errorMessage}`,
+      );
     }
 
     await this.nftModel.create({

@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 
 
 const Mint = () => {
-    const { Signer, account } = useWeb3();
+    const { signer, account } = useWeb3();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: '',
@@ -25,7 +25,7 @@ const Mint = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!Signer || !account) {
+        if (!signer || !account) {
             setError('Please connect your wallet to mint an NFT.');
             return;
         }
@@ -34,25 +34,62 @@ const Mint = () => {
             setMinting(true);
             setError(null);
 
-            const contractAdress = process.env.REACT_APP_NFT_CONTRACT_ADDRESS;
+            const contractAdress = process.env.REACT_APP_CONTRACT_ADDRESS;
             const contractABI = [
-                "function mintNFT(string memory name, string memory description, string memory imageUrl) public returns (uint256)"
+                "function mintNFT(address to, string memory tokenURI) public returns (uint256)",
+                "event NFTMinted(uint256 indexed tokenId, address indexed to, string tokenURI)"
             ]
-            const contract = new ethers.Contract(contractAdress, contractABI, Signer);
+
+            console.log('Minting NFT with data:', formData);
+            console.log('Using contract at address:', contractAdress);
+            console.log('Account:', account);
+            console.log('Signer:', signer);
+
+            const contract = new ethers.Contract(contractAdress, contractABI, signer);
+
+            console.log('Contract instance:', contract);
+
+            const metadata = JSON.stringify({
+                name: formData.name,
+                description: formData.description,
+                image: formData.imageUrl,
+                attributes: []
+            });
+
+            const tokenURI = `data:application/json;base64,${btoa(metadata)}`;
+
+            console.log('Metadata:', metadata);
+            console.log('Token URI:', tokenURI.substring(0, 100) + '...');
 
             const tx = await contract.mintNFT(
-                formData.name,
-                formData.description,
-                formData.imageUrl
+                account,
+                tokenURI
             );
 
-            await tx.wait();
+            const receipt = await tx.wait();
 
+            console.log('Minting transaction receipt:', receipt);
+
+            const mintedEvent = receipt.logs.find(log => {
+                try {
+                    const parsedLog = contract.interface.parseLog(log);
+                    return parsedLog.name === 'NFTMinted';
+                } catch {
+                    return false;
+                }
+            });
+
+            if (mintedEvent) {
+                const parsedLog = contract.interface.parseLog(mintedEvent);
+                const tokenId = parsedLog.args.tokenId.toString();
+                console.log('Minted NFT Token ID:', tokenId);
+            }
+            
             alert('NFT minted successfully!');
             navigate('/profile');
         } catch (err) {
-            console.error('Minting failed', err);
-            setError(err.message || 'Failed to mint NFT');
+            console.error('Minting failed:', err);
+            setError(err.message || 'Minting failed. Please try again.');
         } finally {
             setMinting(false)
         }

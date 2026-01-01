@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { authAPI } from "../services/api";
+import { ethers } from "ethers";
 
 
 const Web3Context = createContext();
@@ -90,7 +91,7 @@ export const Web3Provider = ({ children }) => {
                 }
             }
 
-            const provider = new window.BrowserProvider(window.ethereum);
+            const provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
             const signer = await provider.getSigner();
             const address = accounts[0];
@@ -161,7 +162,7 @@ export const Web3Provider = ({ children }) => {
             setAccount(walletAddress);
 
             if (isMetaMaskInstalled()) {
-                const provider = new window.BrowserProvider(window.ethereum);
+                const provider = new ethers.BrowserProvider(window.ethereum);
                 setProvider(provider);
                 provider.getSigner().then(setSigner).catch(console.error);
             }
