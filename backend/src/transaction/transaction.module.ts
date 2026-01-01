@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Transaction } from 'ethers';
 import { NFT, NFTSchema } from 'src/schemas/nft.schema';
-import { TransactionSchema } from 'src/schemas/transaction.schema';
+import { Transaction, TransactionSchema } from 'src/schemas/transaction.schema';
 import { TransactionController } from './transaction.controller';
 import { TransactionService } from './transaction.service';
 
