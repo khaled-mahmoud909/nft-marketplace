@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { nftAPI } from '../../services/api';
 import NFTCard from '../../components/NFTCard/NFTCard';
 
@@ -9,24 +9,47 @@ const Home = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchNFTs();
-  }, [page]);
-
-  const fetchNFTs = async () => {
+  
+  const fetchNFTs = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      console.log('Fetching NFTs...');
       const response = await nftAPI.getAll({ page, limit: 12 });
+      console.log('NFTs fetched:', response.data);
       setNfts(response.data.nfts);
       setTotalPages(response.data.totalPages);
-      setError(null);
     } catch (err) {
       console.error('Failed to fetch NFTs:', err);
-      setError('Failed to load NFTs. Please try again.');
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error config:', err.config);
+      
+      let errorMessage = 'Failed to load NFTs. ';
+      
+      if (err.code === 'ERR_NETWORK') {
+        errorMessage += 'Cannot connect to backend. Make sure it\'s running on http://localhost:5000';
+      } else if (err.response) {
+        errorMessage += `Server error: ${err.response.status} - ${err.response.statusText}`;
+        if (err.response.data?.message) {
+          errorMessage += ` (${err.response.data.message})`;
+        }
+      } else if (err.request) {
+        errorMessage += 'No response from server. Check if backend is running.';
+      } else {
+        errorMessage += err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    fetchNFTs();
+  }, [fetchNFTs]);
 
   if (loading) {
     return (

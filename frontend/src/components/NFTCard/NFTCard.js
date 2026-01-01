@@ -8,11 +8,11 @@ const NFTCard = ({ nft }) => {
                 
                 <div className="relative pb-[100%] bg-gray-200 rounded-lg overflow-hidden mb-4">
                     <img
-                        src={nft.imageUrl || 'https://via.placeholder.com/400x400?text=No+Image'}
+                        src={nft.imageUrl || 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc9APxkj0xClmrU3PpMZglHQkx446nQPG6lA&s'}
                         alt={nft.name}
                         className="absolute inset-0 w-full h-full object-cover"
                         onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
+                            e.target.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc9APxkj0xClmrU3PpMZglHQkx446nQPG6lA&s';
                         }}
                     />
                 </div>
