@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 @Schema({ timestamps: true })
 export class Nonce {
-  @Prop({ required: true, index: true, lowercase: true })
+  @Prop({ required: true, lowercase: true })
   walletAddress: string;
 
   @Prop({ required: true })
@@ -11,7 +11,7 @@ export class Nonce {
   @Prop({ default: false })
   used: boolean;
 
-  @Prop({ type: Date, index: true })
+  @Prop({ type: Date })
   expiresAt: Date;
 }
 export type NonceDocument = Nonce & Document;
