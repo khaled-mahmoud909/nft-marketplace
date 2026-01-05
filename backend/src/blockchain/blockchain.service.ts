@@ -107,6 +107,42 @@ export class BlockchainService implements OnModuleInit {
       },
     );
 
+    void this.contract.on(
+      'Transfer',
+      (from: string, to: string, tokenId, event: BlockchainEventLog) => {
+        void (async () => {
+          if (from === ethers.ZeroAddress) {
+            this.logger.log(
+              `Skipping Transfer event for mint: tokenId=${tokenId}`,
+            );
+            return;
+          }
+
+          this.logger.log(
+            `NFTTransferred event detected: tokenId=${tokenId}, from=${from}, to=${to}`,
+          );
+
+          try {
+            // Handle NFT transfer logic here
+            await this.handleNFTTransferred(
+              Number(tokenId),
+              from,
+              to,
+              event.log.transactionHash,
+              event.log.blockNumber,
+            );
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            this.logger.error(
+              'Error handling NFTTransferred event',
+              errorMessage,
+            );
+          }
+        })();
+      },
+    );
+
     await this.syncPastEvents();
   }
 
@@ -226,6 +262,47 @@ export class BlockchainService implements OnModuleInit {
     );
   }
 
+  private async handleNFTTransferred(
+    tokenId: number,
+    from: string,
+    to: string,
+    transactionHash: string,
+    blockNumber: number,
+  ) {
+    console.log(
+      `Handling NFT transfer: tokenId=${tokenId}, from=${from}, to=${to}`,
+    );
+    await this.nftModel.findOneAndUpdate(
+      { tokenId },
+      { owner: to.toLowerCase() },
+      { new: true },
+    );
+
+    this.logger.log(`Updated owner of tokenId=${tokenId} to ${to}`);
+
+    const block = await this.provider.getBlock(blockNumber);
+    const timestamp = block ? block.timestamp : Math.floor(Date.now() / 1000);
+
+    await this.transactionModel.create({
+      transactionHash,
+      type: TransactionType.TRANSFER,
+      from: from.toLowerCase(),
+      to: to.toLowerCase(),
+      tokenId,
+      blockNumber,
+      timestamp: new Date(timestamp * 1000),
+    });
+
+    this.logger.log(
+      `Created transfer transaction record for tokenId=${tokenId}`,
+    );
+
+    await this.updateUserStats(from.toLowerCase());
+    await this.updateUserStats(to.toLowerCase());
+
+    this.logger.log(`Updated user stats for ${from} and ${to}`);
+  }
+
   private async syncPastEvents() {
     this.logger.log('Syncing past NFTMinted events from blockchain');
 
@@ -258,6 +335,32 @@ export class BlockchainService implements OnModuleInit {
       }
 
       this.logger.log('Finished syncing past NFTMinted events');
+
+      const transferFilter = this.contract.filters.Transfer(null, null, null);
+      const transferEvents = await this.contract.queryFilter(
+        transferFilter,
+        fromBlock,
+        currentBlock,
+      );
+
+      this.logger.log(
+        `Found ${transferEvents.length} past NFTTransferred events`,
+      );
+      for (const event of transferEvents) {
+        if ('args' in event) {
+          const [tokenId, from, to] = event.args;
+
+          await this.handleNFTTransferred(
+            Number(tokenId),
+            String(from),
+            String(to),
+            event.transactionHash,
+            event.blockNumber,
+          );
+        }
+      }
+
+      this.logger.log('Finished syncing past NFTTransferred events');
     } catch (error) {
       this.logger.error('Error syncing past NFTMinted events', error);
     }
