@@ -99,22 +99,21 @@ export const userAPI = {
 
 export const transactionAPI = {
     getAll: (params) =>
-        api.get('/transactions', { params }),
+        api.get('/transaction', { params }),
     
     getById: (hash) =>
-        api.get(`/transactions/${hash}`),
+        api.get(`/transaction/${hash}`),
 
     getByToken: (tokenId, params) =>
-        api.get(`/transactions/token/${tokenId}`, { params }),
+        api.get(`/transaction/token/${tokenId}`, { params }),
 
     getByAddress: (address, params) =>
-        api.get(`/transactions/address/${address}`, { params }),
+        api.get(`/transaction/address/${address}`, { params }),
 
     getHistory: (tokenId) =>
-        api.get(`/transactions/token/${tokenId}/history`),
-
+        api.get(`/transaction/token/${tokenId}/history`),
     getStats: () =>
-        api.get('/transactions/stats'),
+        api.get('/transaction/stats'),
 };
 
 export default api;
