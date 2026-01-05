@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Transaction } from 'ethers';
 import { Model, QueryFilter } from 'mongoose';
 import {
   GetTransactionsDto,
   TransactionStatsDto,
 } from 'src/dto/transaction.dto';
 import { NFT, NFTDocument } from 'src/schemas/nft.schema';
-import { TransactionDocument } from 'src/schemas/transaction.schema';
+import {
+  Transaction,
+  TransactionDocument,
+} from 'src/schemas/transaction.schema';
 
 @Injectable()
 export class TransactionService {

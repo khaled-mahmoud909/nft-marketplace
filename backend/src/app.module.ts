@@ -5,8 +5,6 @@ import { NftModule } from './nft/nft.module';
 import { AuthModule } from './auth/auth.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { UserModule } from './user/user.module';
-import { TransactionService } from './transaction/transaction.service';
-import { TransactionController } from './transaction/transaction.controller';
 import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
@@ -26,7 +24,5 @@ import { TransactionModule } from './transaction/transaction.module';
     UserModule,
     TransactionModule,
   ],
-  providers: [TransactionService],
-  controllers: [TransactionController],
 })
 export class AppModule {}

@@ -107,6 +107,42 @@ export class BlockchainService implements OnModuleInit {
       },
     );
 
+    void this.contract.on(
+      'Transfer',
+      (from: string, to: string, tokenId, event: BlockchainEventLog) => {
+        void (async () => {
+          if (from === ethers.ZeroAddress) {
+            this.logger.log(
+              `Skipping Transfer event for mint: tokenId=${tokenId}`,
+            );
+            return;
+          }
+
+          this.logger.log(
+            `NFTTransferred event detected: tokenId=${tokenId}, from=${from}, to=${to}`,
+          );
+
+          try {
+            // Handle NFT transfer logic here
+            await this.handleNFTTransferred(
+              Number(tokenId),
+              from,
+              to,
+              event.log.transactionHash,
+              event.log.blockNumber,
+            );
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            this.logger.error(
+              'Error handling NFTTransferred event',
+              errorMessage,
+            );
+          }
+        })();
+      },
+    );
+
     await this.syncPastEvents();
   }
 
@@ -129,8 +165,37 @@ export class BlockchainService implements OnModuleInit {
       description: '',
       image: '',
     };
-    if (tokenURI.startsWith('http')) {
-      try {
+
+    try {
+      if (tokenURI.startsWith('data:application/json;base64,')) {
+        this.logger.log(`Decoding base64 metadata for tokenId=${tokenId}`);
+        const base64Data = tokenURI.replace(
+          'data:application/json;base64,',
+          '',
+        );
+        const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+        metadata = JSON.parse(jsonString) as NFTMetadata;
+        this.logger.log(
+          `Successfully decoded base64 metadata: ${JSON.stringify(metadata)}`,
+        );
+      } else if (tokenURI.startsWith('ipfs://')) {
+        const ipfsHash = tokenURI.replace('ipfs://', '');
+        const ipfsUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
+        this.logger.log(`Fetching IPFS metadata from ${ipfsUrl}`);
+        const response = await fetch(ipfsUrl);
+        if (response.ok) {
+          metadata = (await response.json()) as NFTMetadata;
+          this.logger.log(
+            `Successfully fetched IPFS metadata: ${JSON.stringify(metadata)}`,
+          );
+        } else {
+          this.logger.warn(
+            `Failed to fetch IPFS metadata from ${ipfsUrl}: ${response.statusText}`,
+          );
+        }
+      } else if (tokenURI.startsWith('http')) {
+        this.logger.log(`Fetching metadata from ${tokenURI}`);
+
         const response = await fetch(tokenURI);
         if (response.ok) {
           metadata = (await response.json()) as NFTMetadata;
@@ -139,13 +204,15 @@ export class BlockchainService implements OnModuleInit {
             `Failed to fetch metadata from ${tokenURI}: ${response.statusText}`,
           );
         }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        this.logger.warn(
-          `Error fetching metadata from ${tokenURI}: ${errorMessage}`,
-        );
+      } else {
+        this.logger.warn(`Unsupported tokenURI format: ${tokenURI}`);
       }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Error fetching/parsing metadata for tokenId=${tokenId}: ${errorMessage}`,
+      );
     }
 
     await this.nftModel.create({
@@ -195,6 +262,47 @@ export class BlockchainService implements OnModuleInit {
     );
   }
 
+  private async handleNFTTransferred(
+    tokenId: number,
+    from: string,
+    to: string,
+    transactionHash: string,
+    blockNumber: number,
+  ) {
+    console.log(
+      `Handling NFT transfer: tokenId=${tokenId}, from=${from}, to=${to}`,
+    );
+    await this.nftModel.findOneAndUpdate(
+      { tokenId },
+      { owner: to.toLowerCase() },
+      { new: true },
+    );
+
+    this.logger.log(`Updated owner of tokenId=${tokenId} to ${to}`);
+
+    const block = await this.provider.getBlock(blockNumber);
+    const timestamp = block ? block.timestamp : Math.floor(Date.now() / 1000);
+
+    await this.transactionModel.create({
+      transactionHash,
+      type: TransactionType.TRANSFER,
+      from: from.toLowerCase(),
+      to: to.toLowerCase(),
+      tokenId,
+      blockNumber,
+      timestamp: new Date(timestamp * 1000),
+    });
+
+    this.logger.log(
+      `Created transfer transaction record for tokenId=${tokenId}`,
+    );
+
+    await this.updateUserStats(from.toLowerCase());
+    await this.updateUserStats(to.toLowerCase());
+
+    this.logger.log(`Updated user stats for ${from} and ${to}`);
+  }
+
   private async syncPastEvents() {
     this.logger.log('Syncing past NFTMinted events from blockchain');
 
@@ -227,6 +335,32 @@ export class BlockchainService implements OnModuleInit {
       }
 
       this.logger.log('Finished syncing past NFTMinted events');
+
+      const transferFilter = this.contract.filters.Transfer(null, null, null);
+      const transferEvents = await this.contract.queryFilter(
+        transferFilter,
+        fromBlock,
+        currentBlock,
+      );
+
+      this.logger.log(
+        `Found ${transferEvents.length} past NFTTransferred events`,
+      );
+      for (const event of transferEvents) {
+        if ('args' in event) {
+          const [tokenId, from, to] = event.args;
+
+          await this.handleNFTTransferred(
+            Number(tokenId),
+            String(from),
+            String(to),
+            event.transactionHash,
+            event.blockNumber,
+          );
+        }
+      }
+
+      this.logger.log('Finished syncing past NFTTransferred events');
     } catch (error) {
       this.logger.error('Error syncing past NFTMinted events', error);
     }
