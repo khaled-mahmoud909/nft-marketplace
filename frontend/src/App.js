@@ -5,6 +5,7 @@ import Home from "./pages/Home/Home";
 import Profile from "./pages/Profile/Profile";
 import Mint from "./pages/Mint/Mint";
 import NFTDetail from "./pages/NFTDetail/NFTDetail";
+import Transactions from "./pages/Transactions/Transactions";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/mint" element={<Mint />} />
         <Route path="/nft/:tokenId" element={<NFTDetail />} />
+        <Route path="/transactions" element={<Transactions />} />
       </Routes>
     </div>
   );

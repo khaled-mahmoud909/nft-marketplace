@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { nftAPI } from '../../services/api';
+import { nftAPI, transactionAPI } from '../../services/api';
 import NFTCard from '../../components/NFTCard/NFTCard';
+import { Link } from 'react-router-dom';
 
 const Home = () => {
   const [nfts, setNfts] = useState([]);
@@ -8,6 +9,7 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [recentTransactions, setRecentTransactions] = useState([]);
 
   
   const fetchNFTs = useCallback(async () => {
@@ -47,9 +49,21 @@ const Home = () => {
     }
   }, [page]);
 
+  const fetchRecentTransactions = useCallback(async () => {
+    try {
+      const response = await transactionAPI.getAll({ page: 1, limit: 5 });
+      setRecentTransactions(response.data.transactions || []);
+    } catch (err) {
+      console.error('Failed to fetch recent transactions:', err);
+      setError('Failed to load recent transactions.');
+    }
+  }, []);
+
   useEffect(() => {
     fetchNFTs();
-  }, [fetchNFTs]);
+    fetchRecentTransactions();
+  }, [fetchNFTs, fetchRecentTransactions]);
+  
 
   if (loading) {
     return (
@@ -87,6 +101,39 @@ const Home = () => {
             Explore unique digital assets on the blockchain
           </p>
         </div>
+
+        {recentTransactions.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Recent Activity</h2>
+              <Link to="/transactions" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentTransactions.map((tx) => (
+                <div key={tx.transactionHash} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <span className={`text-2xl`}>
+                      {tx.type === 'mint' ? '🎨' : '🔄'}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">
+                        {tx.type === 'mint' ? 'NFT Minted' : 'NFT Transferred'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Token #{tx.tokenId} • {new Date(tx.timestamp).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Link to={`/nft/${tx.tokenId}`} className="btn-secondary text-sm py-1 px-3">
+                    View
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* NFT Grid */}
         {nfts.length === 0 ? (

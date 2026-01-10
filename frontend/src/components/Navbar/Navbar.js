@@ -41,6 +41,38 @@ const Navbar = () => {
                 {/* Wallet Button */}
                 <WalletButton />
             </div>
+
+            {/* Mobile Menu */}
+            <div className="md:hidden pb-4 space-y-2">
+                <Link
+                    to="/"
+                    className="block text-gray-700 hover:text-primary-600 font-medium py-2"
+                >
+                    Gallery
+                </Link>
+                {isAuthenticated && (
+                    <>
+                        <Link
+                            to="/mint"
+                            className="block text-gray-700 hover:text-primary-600 font-medium py-2"
+                        >
+                            Mint NFT
+                        </Link>
+                        <Link
+                            to="/profile"
+                            className="block text-gray-700 hover:text-primary-600 font-medium py-2"
+                        >
+                            Profile
+                        </Link>
+                        <Link
+                            to="/transactions"
+                            className="block text-gray-700 hover:text-primary-600 font-medium py-2"
+                        >
+                            Transactions
+                        </Link>
+                    </>
+                )}
+            </div>
         </div>
     </nav>
     );
